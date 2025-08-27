@@ -79,11 +79,22 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
-import type { Budget, Expense, OptimizedBudget, BillExplanation } from '@/types';
+import type { Budget, Expense, OptimizedBudget, BillExplanation, JournalEntry } from '@/types';
 import { suggestOptimizedBudget } from '@/ai/flows/suggest-optimized-budget';
 import { explainBill } from '@/ai/flows/explain-bill-flow';
 import { CalendarIcon, Loader2, Pencil, Trash2, Upload, X } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const initialBudgets: Budget[] = [
   { id: '1', category: 'Groceries', amount: 500 },
@@ -100,6 +111,11 @@ const initialExpenses: Expense[] = [
   { id: '5', category: 'Utilities', amount: 180, date: new Date(2024, 5, 12) },
 ];
 
+const initialJournalEntries: JournalEntry[] = [
+    { id: '1', title: '2024 Financial Goals', content: '1. Save $5,000 for an emergency fund.\n2. Pay off credit card debt.\n3. Invest in a low-cost index fund.', date: new Date(2024, 0, 1) },
+    { id: '2', title: 'Thoughts on Subscription Services', content: 'Reviewed all my monthly subscriptions. Canceled two that I barely use. Savings: $30/month.', date: new Date(2024, 4, 20) },
+]
+
 const budgetSchema = z.object({
     category: z.string().min(2, { message: "Category must be at least 2 characters." }),
     amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
@@ -111,16 +127,23 @@ const expenseSchema = z.object({
     date: z.date({ required_error: "A date is required." }),
 });
 
+const journalSchema = z.object({
+    title: z.string().min(3, { message: "Title must be at least 3 characters." }),
+    content: z.string().min(10, { message: "Content must be at least 10 characters." }),
+});
+
 
 export default function DashboardPage() {
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets);
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(initialJournalEntries);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<{optimizedBudgets: OptimizedBudget[], summary: string} | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
   const [billPreview, setBillPreview] = useState<string | null>(null);
   const [billExplanation, setBillExplanation] = useState<BillExplanation | null>(null);
   const [isBillLoading, setIsBillLoading] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -133,6 +156,11 @@ export default function DashboardPage() {
 
   const expenseForm = useForm<z.infer<typeof expenseSchema>>({
     resolver: zodResolver(expenseSchema),
+  });
+
+  const journalForm = useForm<z.infer<typeof journalSchema>>({
+    resolver: zodResolver(journalSchema),
+    defaultValues: { title: "", content: "" },
   });
 
   const { totalBudget, totalSpent, spendingByCategory } = useMemo(() => {
@@ -184,6 +212,19 @@ export default function DashboardPage() {
     setExpenses(expenses.filter(e => e.id !== id));
     toast({ title: "Expense Deleted", variant: "destructive" });
   }
+
+  function handleAddJournalEntry(values: z.infer<typeof journalSchema>) {
+    const newEntry = { id: crypto.randomUUID(), ...values, date: new Date() };
+    setJournalEntries([newEntry, ...journalEntries]);
+    toast({ title: "Journal Entry Added" });
+    journalForm.reset();
+  }
+
+  function deleteJournalEntry(id: string) {
+    setJournalEntries(journalEntries.filter(entry => entry.id !== id));
+    toast({ title: "Journal Entry Deleted", variant: "destructive" });
+  }
+
 
   const handleGetAiSuggestion = async (rules: string) => {
     setIsAiLoading(true);
@@ -319,10 +360,11 @@ export default function DashboardPage() {
           </header>
           <main className="flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
             <Tabs defaultValue="dashboard">
-              <TabsList>
+              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="budgets">Budgets</TabsTrigger>
                 <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                <TabsTrigger value="journal">Journal</TabsTrigger>
                 <TabsTrigger value="ai">AI Assistant</TabsTrigger>
                 <TabsTrigger value="scan">Scan Bill</TabsTrigger>
               </TabsList>
@@ -591,6 +633,97 @@ export default function DashboardPage() {
                         </Table>
                     </CardContent>
                 </Card>
+              </TabsContent>
+              
+              <TabsContent value="journal" className="mt-6">
+                <div className="grid gap-6 lg:grid-cols-3">
+                    <div className="lg:col-span-1">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>New Journal Entry</CardTitle>
+                                <CardDescription>Add a new note, thought, or goal.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Form {...journalForm}>
+                                    <form onSubmit={journalForm.handleSubmit(handleAddJournalEntry)} className="space-y-4">
+                                        <FormField control={journalForm.control} name="title" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Title</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="My financial goal" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={journalForm.control} name="content" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Content</FormLabel>
+                                                <FormControl>
+                                                    <Textarea placeholder="Today I decided to..." {...field} rows={5} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <Button type="submit">Save Entry</Button>
+                                    </form>
+                                </Form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <div className="lg:col-span-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Your Journal</CardTitle>
+                                <CardDescription>Your collection of notes and entries.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {selectedEntry ? (
+                                    <div>
+                                        <Button variant="ghost" onClick={() => setSelectedEntry(null)} className="mb-4 pl-0">
+                                            <Icons.ChevronLeft className="mr-2 h-4 w-4" /> Back to list
+                                        </Button>
+                                        <h3 className="text-xl font-semibold">{selectedEntry.title}</h3>
+                                        <p className="text-sm text-muted-foreground mb-4">{format(selectedEntry.date, "PPP")}</p>
+                                        <p className="whitespace-pre-wrap text-sm">{selectedEntry.content}</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {journalEntries.sort((a,b) => b.date.getTime() - a.date.getTime()).map(entry => (
+                                            <div key={entry.id} className="flex items-start justify-between">
+                                                <div className="flex-1 cursor-pointer" onClick={() => setSelectedEntry(entry)}>
+                                                    <p className="font-medium">{entry.title}</p>
+                                                    <p className="text-sm text-muted-foreground">{format(entry.date, "PPP")}</p>
+                                                </div>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently delete this journal entry.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => deleteJournalEntry(entry.id)}>Delete</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        ))}
+                                         {journalEntries.length === 0 && (
+                                            <p className="text-center text-muted-foreground py-8">No journal entries yet.</p>
+                                        )}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="ai" className="mt-6">

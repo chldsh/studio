@@ -24,3 +24,10 @@ export type BillExplanation = {
   suggestions: string;
   audioDataUri: string;
 };
+
+export type JournalEntry = {
+  id: string;
+  title: string;
+  content: string;
+  date: Date;
+};

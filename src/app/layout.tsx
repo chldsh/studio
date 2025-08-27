@@ -4,7 +4,8 @@ import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: 'TRANSMITTER BY LINDO.SHOOT UNDER THE PEEKARDO COLLECTIVES PTY LTD',
-  description: 'A user-friendly budget planner app designed to help users track their spending, set budgets, and gain financial insights through AI-powered suggestions.',
+  description: 'A user-friendly budget planner app designed to help users track their spending, set budgets, and gain financial insights through AI-powered suggestions. Includes bill scanning and a financial journal.',
+  keywords: "budget planner, expense tracker, financial planning, AI finance, bill scanner, savings app, personal finance",
 };
 
 export default function RootLayout({

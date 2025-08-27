@@ -79,10 +79,10 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
-import type { Budget, Expense, OptimizedBudget, BillExplanation, JournalEntry } from '@/types';
+import type { Budget, Expense, OptimizedBudget, BillExplanation, JournalEntry, SavingsTransaction } from '@/types';
 import { suggestOptimizedBudget } from '@/ai/flows/suggest-optimized-budget';
 import { explainBill } from '@/ai/flows/explain-bill-flow';
-import { CalendarIcon, Loader2, Pencil, Trash2, Upload, X } from 'lucide-react';
+import { CalendarIcon, Loader2, Pencil, PiggyBank, Trash2, Upload, X } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   AlertDialog,
@@ -114,6 +114,10 @@ const initialExpenses: Expense[] = [
 const initialJournalEntries: JournalEntry[] = [
     { id: '1', title: '2024 Financial Goals', content: '1. Save $5,000 for an emergency fund.\n2. Pay off credit card debt.\n3. Invest in a low-cost index fund.', date: new Date(2024, 0, 1) },
     { id: '2', title: 'Thoughts on Subscription Services', content: 'Reviewed all my monthly subscriptions. Canceled two that I barely use. Savings: $30/month.', date: new Date(2024, 4, 20) },
+];
+
+const initialSavingsTransactions: SavingsTransaction[] = [
+    { id: '1', amount: 1000, date: new Date(2024, 4, 1), type: 'deposit' },
 ]
 
 const budgetSchema = z.object({
@@ -132,11 +136,16 @@ const journalSchema = z.object({
     content: z.string().min(10, { message: "Content must be at least 10 characters." }),
 });
 
+const savingsSchema = z.object({
+    amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
+});
+
 
 export default function DashboardPage() {
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets);
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(initialJournalEntries);
+  const [savingsHistory, setSavingsHistory] = useState<SavingsTransaction[]>(initialSavingsTransactions);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<{optimizedBudgets: OptimizedBudget[], summary: string} | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
@@ -163,6 +172,11 @@ export default function DashboardPage() {
     defaultValues: { title: "", content: "" },
   });
 
+  const savingsForm = useForm<z.infer<typeof savingsSchema>>({
+    resolver: zodResolver(savingsSchema),
+    defaultValues: { amount: 0 },
+  });
+
   const { totalBudget, totalSpent, spendingByCategory } = useMemo(() => {
     const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
     const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -187,6 +201,10 @@ export default function DashboardPage() {
       value: item.spent
     }))
   }, [spendingByCategory]);
+
+  const totalSavings = useMemo(() => {
+    return savingsHistory.reduce((sum, t) => sum + t.amount, 0);
+  }, [savingsHistory]);
   
   const PIE_CHART_COLORS = [
     'hsl(var(--chart-1))',
@@ -223,6 +241,30 @@ export default function DashboardPage() {
   function deleteJournalEntry(id: string) {
     setJournalEntries(journalEntries.filter(entry => entry.id !== id));
     toast({ title: "Journal Entry Deleted", variant: "destructive" });
+  }
+
+  function handleDeposit(values: z.infer<typeof savingsSchema>) {
+    const newDeposit: SavingsTransaction = {
+        id: crypto.randomUUID(),
+        amount: values.amount,
+        date: new Date(),
+        type: 'deposit',
+    };
+    setSavingsHistory(prev => [newDeposit, ...prev]);
+    toast({ title: "Deposit Successful", description: `$${values.amount.toFixed(2)} added to your savings.` });
+    savingsForm.reset();
+  }
+
+  function handleAddInterest() {
+      const interestAmount = totalSavings * 0.05;
+      const newInterest: SavingsTransaction = {
+        id: crypto.randomUUID(),
+        amount: interestAmount,
+        date: new Date(),
+        type: 'interest',
+      };
+      setSavingsHistory(prev => [newInterest, ...prev]);
+      toast({ title: "Interest Added", description: `You earned $${interestAmount.toFixed(2)} in interest!` });
   }
 
 
@@ -360,17 +402,18 @@ export default function DashboardPage() {
           </header>
           <main className="flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
             <Tabs defaultValue="dashboard">
-              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
+              <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 h-auto">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="budgets">Budgets</TabsTrigger>
                 <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                <TabsTrigger value="savings">Savings</TabsTrigger>
                 <TabsTrigger value="journal">Journal</TabsTrigger>
                 <TabsTrigger value="ai">AI Assistant</TabsTrigger>
                 <TabsTrigger value="scan">Scan Bill</TabsTrigger>
               </TabsList>
               
               <TabsContent value="dashboard" className="mt-6">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Total Budget</CardTitle>
@@ -401,6 +444,16 @@ export default function DashboardPage() {
                         ${(totalBudget - totalSpent).toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground">Amount left to spend</p>
+                    </CardContent>
+                  </Card>
+                   <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Savings</CardTitle>
+                      <PiggyBank className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-primary">${totalSavings.toFixed(2)}</div>
+                       <p className="text-xs text-muted-foreground">Your current savings balance</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -633,6 +686,79 @@ export default function DashboardPage() {
                         </Table>
                     </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="savings" className="mt-6">
+                <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="space-y-6">
+                        <Card>
+                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle>Savings Balance</CardTitle>
+                                <PiggyBank className="h-6 w-6 text-primary" />
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-4xl font-bold">${totalSavings.toFixed(2)}</p>
+                                <p className="text-muted-foreground">Your total saved amount.</p>
+                            </CardContent>
+                             <CardFooter>
+                                <Button onClick={handleAddInterest} disabled={totalSavings <= 0}>
+                                    <Icons.TrendingUp className="mr-2 h-4 w-4" />
+                                    Calculate & Add 5% Monthly Interest
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Make a Deposit</CardTitle>
+                                <CardDescription>Add money to your savings account.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Form {...savingsForm}>
+                                    <form onSubmit={savingsForm.handleSubmit(handleDeposit)} className="space-y-4">
+                                        <FormField control={savingsForm.control} name="amount" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Amount to Deposit</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="e.g., 100" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <Button type="submit">Deposit</Button>
+                                    </form>
+                                </Form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Savings History</CardTitle>
+                            <CardDescription>Your history of deposits and interest earned.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {savingsHistory.sort((a,b) => b.date.getTime() - a.date.getTime()).map(t => (
+                                        <TableRow key={t.id}>
+                                            <TableCell>{t.date.toLocaleDateString()}</TableCell>
+                                            <TableCell className="font-medium capitalize">{t.type}</TableCell>
+                                            <TableCell className={`text-right font-semibold ${t.type === 'interest' ? 'text-primary' : ''}`}>
+                                                ${t.amount.toFixed(2)}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
               </TabsContent>
               
               <TabsContent value="journal" className="mt-6">

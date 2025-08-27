@@ -31,3 +31,10 @@ export type JournalEntry = {
   content: string;
   date: Date;
 };
+
+export type SavingsTransaction = {
+  id: string;
+  amount: number;
+  date: Date;
+  type: 'deposit' | 'interest';
+};

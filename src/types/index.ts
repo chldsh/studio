@@ -15,3 +15,12 @@ export type OptimizedBudget = {
   category: string;
   suggestedBudget: string;
 };
+
+export type BillExplanation = {
+  vendor: string;
+  totalAmount: number;
+  category: string;
+  explanation: string;
+  suggestions: string;
+  audioDataUri: string;
+};

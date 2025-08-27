@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import Image from 'next/image';
 import {
   AreaChart,
   Area,
@@ -78,9 +79,10 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
-import type { Budget, Expense, OptimizedBudget } from '@/types';
+import type { Budget, Expense, OptimizedBudget, BillExplanation } from '@/types';
 import { suggestOptimizedBudget } from '@/ai/flows/suggest-optimized-budget';
-import { CalendarIcon, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { explainBill } from '@/ai/flows/explain-bill-flow';
+import { CalendarIcon, Loader2, Pencil, Trash2, Upload, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 const initialBudgets: Budget[] = [
@@ -115,6 +117,13 @@ export default function DashboardPage() {
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<{optimizedBudgets: OptimizedBudget[], summary: string} | null>(null);
+  const [billFile, setBillFile] = useState<File | null>(null);
+  const [billPreview, setBillPreview] = useState<string | null>(null);
+  const [billExplanation, setBillExplanation] = useState<BillExplanation | null>(null);
+  const [isBillLoading, setIsBillLoading] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { toast } = useToast();
 
   const budgetForm = useForm<z.infer<typeof budgetSchema>>({
@@ -213,6 +222,71 @@ export default function DashboardPage() {
     toast({ title: "Export Successful", description: "Your expense data has been downloaded." });
   };
 
+  const handleBillFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        setBillFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setBillPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        setBillExplanation(null);
+    }
+  };
+
+  const handleScanBill = async () => {
+    if (!billFile || !billPreview) {
+        toast({ title: "No file selected", description: "Please select a bill image to scan.", variant: "destructive" });
+        return;
+    }
+    setIsBillLoading(true);
+    setBillExplanation(null);
+    try {
+        const result = await explainBill({ billDataUri: billPreview });
+        setBillExplanation(result);
+        
+        // Automatically add the scanned bill as an expense
+        if (result.category && result.totalAmount) {
+          const newExpense = {
+            id: crypto.randomUUID(),
+            category: result.category,
+            amount: result.totalAmount,
+            date: new Date(),
+          };
+          setExpenses(prev => [...prev, newExpense]);
+          // Check if category exists in budget, if not add it.
+          if (!budgets.find(b => b.category === result.category)) {
+            const newBudget = {
+              id: crypto.randomUUID(),
+              category: result.category,
+              amount: 0, // Set a default of 0, user can adjust
+            };
+            setBudgets(prev => [...prev, newBudget]);
+            toast({ title: "New Category Added", description: `"${result.category}" was added to your budgets. Please set an amount.` });
+          }
+           toast({ title: "Expense Logged", description: `Scanned bill for ${result.vendor} of $${result.totalAmount.toFixed(2)} added to your expenses.` });
+        }
+
+
+    } catch (error) {
+        console.error("Bill scanning error:", error);
+        toast({ title: "Scanning Error", description: "Could not analyze the bill. Please try another image.", variant: "destructive" });
+    } finally {
+        setIsBillLoading(false);
+    }
+  };
+
+  const clearBill = () => {
+    setBillFile(null);
+    setBillPreview(null);
+    setBillExplanation(null);
+    if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+  }
+
+
   return (
     <div className="min-h-screen w-full bg-background font-sans">
       <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
@@ -250,6 +324,7 @@ export default function DashboardPage() {
                 <TabsTrigger value="budgets">Budgets</TabsTrigger>
                 <TabsTrigger value="expenses">Expenses</TabsTrigger>
                 <TabsTrigger value="ai">AI Assistant</TabsTrigger>
+                <TabsTrigger value="scan">Scan Bill</TabsTrigger>
               </TabsList>
               
               <TabsContent value="dashboard" className="mt-6">
@@ -574,6 +649,104 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 )}
+              </TabsContent>
+              <TabsContent value="scan" className="mt-6">
+                <div className="grid gap-6 lg:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Scan a Bill</CardTitle>
+                            <CardDescription>Upload an image of a bill to automatically log it as an expense and get insights.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <Input
+                                id="bill-upload"
+                                type="file"
+                                accept="image/*,.pdf"
+                                onChange={handleBillFileChange}
+                                className="hidden"
+                                ref={fileInputRef}
+                            />
+                            {billPreview ? (
+                                <div className="relative group">
+                                    <Image src={billPreview} alt="Bill preview" width={400} height={400} className="rounded-md object-contain w-full h-auto max-h-[300px]" />
+                                    <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100" onClick={clearBill}>
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <label
+                                    htmlFor="bill-upload"
+                                    className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted"
+                                >
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <Upload className="w-10 h-10 mb-3 text-muted-foreground" />
+                                        <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                        <p className="text-xs text-muted-foreground">PNG, JPG, or PDF</p>
+                                    </div>
+                                </label>
+                            )}
+
+                            <Button onClick={handleScanBill} disabled={isBillLoading || !billFile} className="w-full">
+                                {isBillLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scanning...</> : "Scan Bill & Log Expense"}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                    
+                    { (isBillLoading || billExplanation) &&
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Bill Analysis</CardTitle>
+                            <CardDescription>Here is what the AI found in your bill.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {isBillLoading ? (
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-4">
+                                        <div className="space-y-2">
+                                            <div className="h-4 bg-muted rounded w-[250px]"></div>
+                                            <div className="h-4 bg-muted rounded w-[200px]"></div>
+                                        </div>
+                                    </div>
+                                    <div className="h-8 bg-muted rounded w-full"></div>
+                                    <div className="space-y-2">
+                                        <div className="h-4 bg-muted rounded w-full"></div>
+                                        <div className="h-4 bg-muted rounded w-[90%]"></div>
+                                        <div className="h-4 bg-muted rounded w-[80%]"></div>
+                                    </div>
+                                </div>
+                            ) : billExplanation && (
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-3 gap-4 text-sm">
+                                        <div>
+                                            <p className="text-muted-foreground">Vendor</p>
+                                            <p className="font-semibold">{billExplanation.vendor}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Amount</p>
+                                            <p className="font-semibold">${billExplanation.totalAmount.toFixed(2)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground">Category</p>
+                                            <p className="font-semibold">{billExplanation.category}</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold mb-2">Spoken Explanation</h3>
+                                        <p className="text-sm text-foreground/80 italic mb-2">"{billExplanation.explanation}"</p>
+                                        <audio controls src={billExplanation.audioDataUri} className="w-full">
+                                            Your browser does not support the audio element.
+                                        </audio>
+                                    </div>
+                                     <div>
+                                        <h3 className="font-semibold mb-2">Budgeting Tips</h3>
+                                        <p className="text-sm text-foreground/80 whitespace-pre-wrap">{billExplanation.suggestions}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                    }
+                </div>
               </TabsContent>
 
             </Tabs>

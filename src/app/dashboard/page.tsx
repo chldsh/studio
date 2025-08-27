@@ -163,6 +163,7 @@ export default function DashboardPage() {
   const [billExplanation, setBillExplanation] = useState<BillExplanation | null>(null);
   const [isBillLoading, setIsBillLoading] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+  const [isBillyOpen, setIsBillyOpen] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1052,6 +1053,27 @@ export default function DashboardPage() {
 
             </Tabs>
           </main>
+           {isBillyOpen && (
+            <Card className="fixed bottom-4 right-4 w-80 shadow-lg border-primary/20">
+                <CardHeader className="flex flex-row items-start gap-3 space-y-0">
+                    <div className="p-2 bg-primary/10 rounded-full">
+                        <Icons.Bot className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                        <CardTitle>Hello, User!</CardTitle>
+                        <CardDescription>I'm Billy, your financial pal.</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 -mt-2" onClick={() => setIsBillyOpen(false)}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-foreground/80">
+                        Welcome back! It looks like you have spent <strong>${totalSpent.toFixed(2)}</strong> so far this month. You have <strong>${(totalBudget - totalSpent).toFixed(2)}</strong> remaining in your budget. Keep up the great work!
+                    </p>
+                </CardContent>
+            </Card>
+           )}
         </div>
       </div>
     </div>

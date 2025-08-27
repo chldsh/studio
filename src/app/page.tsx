@@ -50,6 +50,12 @@ export default function WelcomePage() {
               Enter Service Menu
             </Button>
           </form>
+           <div className="mt-4 text-center text-sm">
+              Don't have an account?{' '}
+              <a href="#" className="underline">
+                Create Account
+              </a>
+            </div>
         </CardContent>
       </Card>
       <footer className="absolute bottom-4 text-center text-sm text-white/80">

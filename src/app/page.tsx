@@ -298,7 +298,7 @@ export default function DashboardPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "transmitter_expenses.csv");
+    link.setAttribute("download", "mybillpal_expenses.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -378,12 +378,10 @@ export default function DashboardPage() {
             <div className="flex h-[60px] items-center border-b px-6">
               <a href="/" className="flex items-center gap-2 font-semibold">
                 <Icons.Logo className="h-6 w-6 text-primary" />
-                <span className="">TRANSMITTER</span>
+                <span className="">myBill.Pal</span>
               </a>
             </div>
             <div className="flex-1 overflow-auto py-2">
-              <p className="px-6 text-xs text-muted-foreground">BY LINDO.SHOOT</p>
-              <p className="px-6 text-xs text-muted-foreground">UNDER THE PEEKARDO COLLECTIVES PTY LTD</p>
             </div>
           </div>
         </div>
@@ -391,7 +389,7 @@ export default function DashboardPage() {
           <header className="flex h-14 items-center gap-4 border-b bg-card px-6 lg:h-[60px]">
              <a href="/" className="flex items-center gap-2 font-semibold lg:hidden">
                 <Icons.Logo className="h-6 w-6 text-primary" />
-                <span>TRANSMITTER</span>
+                <span>myBill.Pal</span>
               </a>
             <div className="flex-1">
                 {/* Mobile Nav Trigger could go here */}

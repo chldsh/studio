@@ -76,13 +76,22 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
 import type { Budget, Expense, OptimizedBudget, BillExplanation, JournalEntry, SavingsTransaction } from '@/types';
 import { suggestOptimizedBudget } from '@/ai/flows/suggest-optimized-budget';
 import { explainBill } from '@/ai/flows/explain-bill-flow';
-import { CalendarIcon, Loader2, Pencil, PiggyBank, Trash2, Upload, X } from 'lucide-react';
+import { CalendarIcon, FileText, Loader2, LogOut, Pencil, PiggyBank, Trash2, Upload, User, X } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   AlertDialog,
@@ -397,6 +406,40 @@ export default function DashboardPage() {
             <Button onClick={handleExport} variant="outline" size="sm">
                 <Icons.Download className="mr-2 h-4 w-4" /> Export Data
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src="#" alt="User Avatar" />
+                    <AvatarFallback>U</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">User</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      user@example.com
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Personal Information</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>Documents & Statements</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </header>
           <main className="flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
             <Tabs defaultValue="dashboard">

@@ -59,7 +59,7 @@ export default function WelcomePage() {
         </CardContent>
       </Card>
       <footer className="absolute bottom-4 text-center text-sm text-white/80">
-        <p>&copy; {new Date().getFullYear()} TRANSMITTER BY LINDO.SHOOT UNDER THE PEEKARDO COLLECTIVES PTY LTD</p>
+        <p>&copy; {new Date().getFullYear()} myBill.Pal. All rights reserved.</p>
       </footer>
     </div>
   );

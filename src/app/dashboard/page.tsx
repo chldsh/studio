@@ -92,7 +92,7 @@ import { Icons } from '@/components/icons';
 import type { Budget, Expense, OptimizedBudget, BillExplanation, JournalEntry, SavingsTransaction } from '@/types';
 import { suggestOptimizedBudget } from '@/ai/flows/suggest-optimized-budget';
 import { explainBill } from '@/ai/flows/explain-bill-flow';
-import { CalendarIcon, FileText, Loader2, LogOut, Pencil, PiggyBank, Trash2, Upload, User, X } from 'lucide-react';
+import { CalendarIcon, FileText, LayoutDashboard, Loader2, LogOut, Pencil, PiggyBank, Receipt, ScanLine, Trash2, Upload, User, Wallet, X } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   AlertDialog,
@@ -164,6 +164,7 @@ export default function DashboardPage() {
   const [isBillLoading, setIsBillLoading] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [isBillyOpen, setIsBillyOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -393,6 +394,85 @@ export default function DashboardPage() {
               </a>
             </div>
             <div className="flex-1 overflow-auto py-2">
+                 <nav className="grid items-start px-4 text-sm font-medium">
+                  <a
+                    href="#"
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                      activeTab === 'dashboard' && 'bg-muted text-primary'
+                    )}
+                    onClick={() => setActiveTab('dashboard')}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Dashboard
+                  </a>
+                  <a
+                    href="#"
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                       activeTab === 'budgets' && 'bg-muted text-primary'
+                    )}
+                     onClick={() => setActiveTab('budgets')}
+                  >
+                    <Wallet className="h-4 w-4" />
+                    Budgets
+                  </a>
+                  <a
+                    href="#"
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                       activeTab === 'expenses' && 'bg-muted text-primary'
+                    )}
+                     onClick={() => setActiveTab('expenses')}
+                  >
+                    <Receipt className="h-4 w-4" />
+                    Expenses
+                  </a>
+                  <a
+                    href="#"
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                      activeTab === 'savings' && 'bg-muted text-primary'
+                    )}
+                    onClick={() => setActiveTab('savings')}
+                  >
+                    <PiggyBank className="h-4 w-4" />
+                    Savings
+                  </a>
+                   <a
+                    href="#"
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                      activeTab === 'journal' && 'bg-muted text-primary'
+                    )}
+                    onClick={() => setActiveTab('journal')}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Journal
+                  </a>
+                   <a
+                    href="#"
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                       activeTab === 'ai' && 'bg-muted text-primary'
+                    )}
+                     onClick={() => setActiveTab('ai')}
+                  >
+                    <Icons.Bot className="h-4 w-4" />
+                    AI Assistant
+                  </a>
+                   <a
+                    href="#"
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                       activeTab === 'scan' && 'bg-muted text-primary'
+                    )}
+                     onClick={() => setActiveTab('scan')}
+                  >
+                    <ScanLine className="h-4 w-4" />
+                    Scan Bill
+                  </a>
+                </nav>
             </div>
           </div>
         </div>
@@ -444,7 +524,7 @@ export default function DashboardPage() {
             </DropdownMenu>
           </header>
           <main className="flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-            <Tabs defaultValue="dashboard">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 h-auto">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="budgets">Budgets</TabsTrigger>
@@ -1060,7 +1140,7 @@ export default function DashboardPage() {
                         <Icons.Bot className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex-1">
-                        <CardTitle>Hello, User!</CardTitle>
+                        <CardTitle>Hello there!</CardTitle>
                         <CardDescription>I'm Billy, your financial pal.</CardDescription>
                     </div>
                     <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 -mt-2" onClick={() => setIsBillyOpen(false)}>

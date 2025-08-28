@@ -1,0 +1,11 @@
+{
+    "editor.accessibilitySupport": "auto",
+    "accessibility.signalOptions.debouncePositionChanges": true,
+    "accessibility.signalOptions.experimental.delays.errorAtPosition": {
+        "announcement": 3000
+    },
+    "accessibility.signalOptions.experimental.delays.warningAtPosition": {
+        "announcement": 3000
+    },
+    "terminal.integrated.focusAfterRun": "terminal"
+}

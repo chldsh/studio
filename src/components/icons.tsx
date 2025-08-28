@@ -1,5 +1,5 @@
 import type { SVGProps } from "react"
-import { Landmark, TrendingUp, Wallet, Settings, CircleDollarSign, Plus, Download, Bot, ChevronLeft, BookOpen } from 'lucide-react';
+import { Landmark, TrendingUp, Wallet, Settings, CircleDollarSign, Plus, Download, Bot, ChevronLeft, BookOpen, LayoutDashboard, Receipt, PiggyBank, Pencil, ScanLine } from 'lucide-react';
 
 export const Icons = {
   Logo: (props: SVGProps<SVGSVGElement>) => (
@@ -29,4 +29,9 @@ export const Icons = {
   Bot,
   ChevronLeft,
   BookOpen,
+  LayoutDashboard,
+  Receipt,
+  PiggyBank,
+  Pencil,
+  ScanLine
 };
